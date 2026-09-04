@@ -22,13 +22,15 @@ Here's what I used to build this:
 ## How to run it locally
 
 **Step 1: Set up the Database**
-You'll need PostgreSQL running on your machine. Just create a blank database called `notification_db`.
-*(Note: The app expects the username as `postgres` and password as `postgres` on port `5432`. You can change this in `src/main/resources/application.properties` if your local setup is different).*
+You'll need a PostgreSQL database to store the queue. 
 
-If you use Docker, you can spin one up instantly by running this in your terminal:
+If you have Docker installed, this is super easy. Just open your terminal in the project folder and run:
 ```bash
-docker run --name postgres-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=notification_db -p 5432:5432 -d postgres
+docker-compose up -d
 ```
+This instantly starts a ready-to-go database with the correct name and passwords. 
+
+*(If you aren't using Docker, just manually create a local Postgres database called `notification_db` with the username and password set to `postgres` on port `5432`).*
 
 **Step 2: Start the app**
 Open your terminal in the project folder and run:
@@ -41,27 +43,7 @@ mvn spring-boot:run
 Once the app is running (it usually starts on port 8080), here is how you can play around with it:
 
 ### 1. The easy way (Swagger UI)
-Open your browser and go to [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). You'll see a nice graphical interface where you can click around and test all the API endpoints without writing any code.
+Open your browser and go to [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). You'll see a nice graphical interface where you can click around, create new notifications, and test all the API endpoints without writing any code.
 
 ### 2. The Postman way
 I've included a file called `NotificationQueueService.postman_collection.json` in the root folder. Just import it into Postman and all the requests are ready to go with example data.
-
-### 3. The Terminal way (cURL)
-Want to see the queue in action? Open a new terminal and send this request to create a new notification:
-
-```bash
-curl -X POST http://localhost:8080/api/notifications \
--H "Content-Type: application/json" \
--d '{
-  "recipient": "test@example.com",
-  "channel": "EMAIL",
-  "subject": "Hello!",
-  "message": "Testing the background worker.",
-  "priority": "HIGH"
-}'
-```
-
-### Watch the Magic Happen
-After you send that request, look back at the terminal where your Spring Boot app is running. Within 5 seconds, you'll see the background worker wake up, find your `PENDING` message in the database, and process it. 
-
-Try sending a few requests at once with different priorities (`HIGH`, `NORMAL`, `LOW`) and watch the logs to see how the worker sorts and handles them!
