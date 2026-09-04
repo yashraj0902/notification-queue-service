@@ -1,6 +1,3 @@
-# Notification Queue Service
-
-Hey! Welcome to the Notification Queue Service. 
 
 ## What is this project?
 
