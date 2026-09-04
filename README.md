@@ -1,7 +1,3 @@
-# Notification Queue Service
-
-Hey! Welcome to the Notification Queue Service. 
-
 ## What is this project?
 
 If you've ever bought something online, you know you don't get the "Order Confirmed" email the exact millisecond you click buy. It usually takes a few seconds or a minute. 
