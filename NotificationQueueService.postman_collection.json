@@ -1,0 +1,145 @@
+{
+    "info": {
+        "name": "Notification Queue Service",
+        "description": "API endpoints for the Notification Queue Service",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Create Notification",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"recipient\": \"user@example.com\",\n    \"channel\": \"EMAIL\",\n    \"subject\": \"Welcome!\",\n    \"message\": \"Thank you for signing up.\",\n    \"priority\": \"HIGH\"\n}"
+                }
+            }
+        },
+        {
+            "name": "Get All Notifications",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Get Filtered Notifications",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications?status=PENDING&channel=EMAIL",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications"
+                    ],
+                    "query": [
+                        {
+                            "key": "status",
+                            "value": "PENDING"
+                        },
+                        {
+                            "key": "channel",
+                            "value": "EMAIL"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Get Notification By ID",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications/1",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications",
+                        "1"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Get Notification Stats",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications/stats",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications",
+                        "stats"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Cancel Notification",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/api/notifications/1",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "notifications",
+                        "1"
+                    ]
+                }
+            }
+        }
+    ]
+}
