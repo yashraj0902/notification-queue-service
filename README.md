@@ -1,112 +1,67 @@
 # Notification Queue Service
 
-## Project Overview
-The Notification Queue Service is a Spring Boot backend application that decouples the act of requesting a notification from the actual sending process. It uses a persisted database queue and a scheduled worker to process, send, and optionally retry notifications (Email, SMS, Push). 
+Hey! Welcome to the Notification Queue Service. 
 
-This design mirrors real-world systems used in e-commerce (e.g., order updates) and appointment reminders where high reliability and asynchronous processing are essential.
+## What is this project?
 
-## Architecture
+If you've ever bought something online, you know you don't get the "Order Confirmed" email the *exact* millisecond you click buy. It usually takes a few seconds or a minute. 
 
-```text
-+-------------------+       +-----------------------+       +-------------------+
-|                   |       |                       |       |                   |
-|   Client App      +------>+  Notification API     +------>+  PostgreSQL DB    |
-| (Creates Request) | POST  |  (Spring Web MVC)     | Save  | (notifications)   |
-|                   |       |                       |       |                   |
-+-------------------+       +-----------+-----------+       +---------+---------+
-                                        |                             ^
-                                        |                             |
-                                        v                             | Fetch/Update
-                            +-----------------------+                 |
-                            |                       |                 |
-                            | Scheduled Worker      +-----------------+
-                            | (@Scheduled Poller)   |
-                            |                       |
-                            +-----------+-----------+
-                                        |
-                                        v
-                            +-----------------------+
-                            |                       |
-                            |  Sender Strategy      |
-                            |  (Email/SMS/Push)     |
-                            |                       |
-                            +-----------------------+
-```
+This project simulates that real-world behavior. It's a Spring Boot backend API that accepts notification requests (like Email, SMS, or Push) and immediately puts them into a database queue. 
 
-## Setup Instructions
+Behind the scenes, a background worker wakes up every 5 seconds. It looks at the database, grabs the pending messages (handling the `HIGH` priority ones first), and simulates sending them out. If a message fails to send (which I've randomly set to happen 15% of the time for realism), the worker leaves it in the queue and tries again on the next run, up to 3 times.
 
-### Prerequisites
-- **Java 17+**
-- **Maven**
-- **PostgreSQL** running locally
+## Tech Stack
 
-### PostgreSQL Setup
-If you are using Docker, you can quickly start a local Postgres database:
+Here's what I used to build this:
+* **Java 17** 
+* **Spring Boot 3** (Spring Web, Spring Data JPA, Spring Scheduling)
+* **PostgreSQL** (to store our queue safely)
+* **Lombok** (to save time writing boilerplate code like getters/setters)
+* **Swagger / OpenAPI** (for testing the API easily in a browser)
+
+## How to run it locally
+
+**Step 1: Set up the Database**
+You'll need PostgreSQL running on your machine. Just create a blank database called `notification_db`.
+*(Note: The app expects the username as `postgres` and password as `postgres` on port `5432`. You can change this in `src/main/resources/application.properties` if your local setup is different).*
+
+If you use Docker, you can spin one up instantly by running this in your terminal:
 ```bash
 docker run --name postgres-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=notification_db -p 5432:5432 -d postgres
 ```
-Alternatively, create a database named `notification_db` manually in your local PostgreSQL server.
 
-The application configuration connects using:
-- **URL**: `jdbc:postgresql://localhost:5432/notification_db`
-- **Username**: `postgres`
-- **Password**: `postgres`
-
-### Running the Application
-Run the service using Maven:
+**Step 2: Start the app**
+Open your terminal in the project folder and run:
 ```bash
 mvn spring-boot:run
 ```
 
-Once started, the API runs on `http://localhost:8080`.
+## How to actually use it
 
-### API Documentation
-Swagger UI is available at:
-[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+Once the app is running (it usually starts on port 8080), here is how you can play around with it:
 
-## Example API Requests (cURL)
+### 1. The easy way (Swagger UI)
+Open your browser and go to [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). You'll see a nice graphical interface where you can click around and test all the API endpoints without writing any code.
 
-**1. Create a Notification**
+### 2. The Postman way
+I've included a file called `NotificationQueueService.postman_collection.json` in the root folder. Just import it into Postman and all the requests are ready to go with example data.
+
+### 3. The Terminal way (cURL)
+Want to see the queue in action? Open a new terminal and send this request to create a new notification:
+
 ```bash
 curl -X POST http://localhost:8080/api/notifications \
 -H "Content-Type: application/json" \
 -d '{
-  "recipient": "user@example.com",
+  "recipient": "test@example.com",
   "channel": "EMAIL",
-  "subject": "Order Shipped",
-  "message": "Your order #1234 has been shipped.",
+  "subject": "Hello!",
+  "message": "Testing the background worker.",
   "priority": "HIGH"
 }'
 ```
 
-**2. List All Notifications**
-```bash
-curl -X GET http://localhost:8080/api/notifications
-```
+### Watch the Magic Happen
+After you send that request, look back at the terminal where your Spring Boot app is running. Within 5 seconds, you'll see the background worker wake up, find your `PENDING` message in the database, and process it. 
 
-**3. Get Filtered Notifications**
-```bash
-curl -X GET "http://localhost:8080/api/notifications?status=PENDING&channel=EMAIL"
-```
-
-**4. Get Notification By ID**
-```bash
-curl -X GET http://localhost:8080/api/notifications/1
-```
-
-**5. Get Notification Stats**
-```bash
-curl -X GET http://localhost:8080/api/notifications/stats
-```
-
-**6. Cancel a Notification**
-```bash
-curl -X DELETE http://localhost:8080/api/notifications/1
-```
-
-## Design Decisions
-
-- **Polling Scheduler (`@Scheduled`)**: Rather than directly calling the sending logic when the API request arrives, the notification is saved to a PostgreSQL database with a `PENDING` status. A background worker periodically polls for these `PENDING` notifications. This decouples the sender from the API, allows requests to return quickly, provides fault tolerance (retries), and enables future-proofing like deferred sending (`scheduledAt`).
-- **Status-based State Machine**: Tracking `PENDING`, `SENT`, and `FAILED` makes system behavior observable and easy to query. This provides idempotency—we ensure `SENT` items are never resent—and facilitates the retry logic where items remain `PENDING` until `attempts >= maxAttempts`.
-- **Strategy Pattern for Senders**: Instead of complex if-else logic within the worker, the `NotificationSenderFactory` provides the right `NotificationSender` implementation (Email, SMS, Push) dynamically at runtime based on the notification's `channel`. This ensures the code adheres to the Open/Closed Principle (adding new channels only requires a new implementation class, not modifying existing logic).
-- **Global Exception Handling**: Uses `@ControllerAdvice` to intercept exceptions (like missing entries or validation errors) and map them to appropriate HTTP statuses (`404 Not Found`, `409 Conflict`, `400 Bad Request`), keeping controllers clean.
+Try sending a few requests at once with different priorities (`HIGH`, `NORMAL`, `LOW`) and watch the logs to see how the worker sorts and handles them!
