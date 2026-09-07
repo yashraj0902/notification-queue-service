@@ -9,11 +9,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,12 +32,14 @@ public class NotificationController {
     }
 
     @GetMapping
-    @Operation(summary = "List all notifications (supports optional filtering)")
-    public ResponseEntity<List<NotificationResponseDTO>> getNotifications(
+    @Operation(summary = "List all notifications (supports optional filtering and pagination)")
+    public ResponseEntity<Page<NotificationResponseDTO>> getNotifications(
             @RequestParam(required = false) NotificationStatus status,
-            @RequestParam(required = false) NotificationChannel channel) {
-        List<NotificationResponseDTO> responses = notificationService.getNotifications(status, channel);
-        return ResponseEntity.ok(responses);
+            @RequestParam(required = false) NotificationChannel channel,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<NotificationResponseDTO> response = notificationService.getNotifications(status, channel, page, size);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")

@@ -10,6 +10,10 @@ import com.example.notificationqueue.model.NotificationStatus;
 import com.example.notificationqueue.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,20 +46,23 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NotificationResponseDTO> getNotifications(NotificationStatus status, NotificationChannel channel) {
-        List<Notification> notifications;
+    public Page<NotificationResponseDTO> getNotifications(NotificationStatus status, NotificationChannel channel, int page, int size) {
+        // Create a Pageable object, sorting by newest first
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Notification> notificationPage;
         
         if (status != null && channel != null) {
-            notifications = notificationRepository.findByStatusAndChannel(status, channel);
+            notificationPage = notificationRepository.findByStatusAndChannel(status, channel, pageable);
         } else if (status != null) {
-            notifications = notificationRepository.findByStatus(status);
+            notificationPage = notificationRepository.findByStatus(status, pageable);
         } else if (channel != null) {
-            notifications = notificationRepository.findByChannel(channel);
+            notificationPage = notificationRepository.findByChannel(channel, pageable);
         } else {
-            notifications = notificationRepository.findAll();
+            notificationPage = notificationRepository.findAll(pageable);
         }
         
-        return notifications.stream().map(this::mapToDTO).collect(Collectors.toList());
+        // Convert the Page of Entities into a Page of DTOs
+        return notificationPage.map(this::mapToDTO);
     }
 
     @Transactional(readOnly = true)

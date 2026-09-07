@@ -20,7 +20,7 @@ public class SmsSender implements NotificationSender {
         // Simulate ~15% failure rate
         if (random.nextInt(100) < 15) {
             log.warn("[SMS] Failed to send to {}", notification.getRecipient());
-            return false;
+            return false;   
         }
         
         return true;
