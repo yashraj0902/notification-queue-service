@@ -11,85 +11,83 @@ import com.example.notificationqueue.model.NotificationStatus;
 import com.example.notificationqueue.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
+@SpringBootTest
+@Transactional // Ensures the test database wipes itself clean after every single test
 class NotificationServiceTest {
 
-    private NotificationRepository notificationRepository;
+    @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @BeforeEach
     void setUp() {
-        // We "mock" the repository so we don't need a real Postgres database running just to run our tests.
-        notificationRepository = mock(NotificationRepository.class);
-        notificationService = new NotificationService(notificationRepository);
+        // No Mockito needed! We wipe the real (in-memory) database clean before each test.
+        notificationRepository.deleteAll();
     }
 
     @Test
     void testCreateNotification_Success() {
         // 1. Arrange (Set up the test data)
         NotificationRequestDTO request = new NotificationRequestDTO();
-        request.setRecipient("test@example.com");
+        request.setRecipient("purejunit@example.com");
         request.setChannel(NotificationChannel.EMAIL);
-        request.setMessage("Hello JUnit");
+        request.setMessage("Hello pure JUnit");
         request.setPriority(NotificationPriority.HIGH);
-
-        Notification savedNotification = new Notification();
-        savedNotification.setId(1L);
-        savedNotification.setRecipient("test@example.com");
-        savedNotification.setChannel(NotificationChannel.EMAIL);
-        savedNotification.setMessage("Hello JUnit");
-        savedNotification.setStatus(NotificationStatus.PENDING);
-
-        // Tell our fake database to return 'savedNotification' when save() is called
-        when(notificationRepository.save(any(Notification.class))).thenReturn(savedNotification);
 
         // 2. Act (Actually call the method we are testing)
         NotificationResponseDTO response = notificationService.createNotification(request);
 
         // 3. Assert (Check if the results are what we expect)
         assertNotNull(response);
-        assertEquals(1L, response.getId());
-        assertEquals("test@example.com", response.getRecipient());
+        assertNotNull(response.getId()); // The real database generated a real ID!
+        assertEquals("purejunit@example.com", response.getRecipient());
         assertEquals(NotificationStatus.PENDING, response.getStatus());
         
-        // Verify that the repository's save method was indeed called exactly once
-        verify(notificationRepository, times(1)).save(any(Notification.class));
+        // Verify it was actually saved in our in-memory database
+        assertEquals(1, notificationRepository.count());
     }
 
     @Test
     void testGetNotificationById_NotFound_ThrowsException() {
-        // Arrange
-        // Simulate the database finding absolutely nothing for ID 99
-        when(notificationRepository.findById(99L)).thenReturn(Optional.empty());
-
         // Act & Assert
-        // Expect a ResourceNotFoundException to be thrown when we ask for ID 99
+        // Expect a ResourceNotFoundException because the database is totally empty
         assertThrows(ResourceNotFoundException.class, () -> {
-            notificationService.getNotificationById(99L);
+            notificationService.getNotificationById(999L);
         });
     }
 
     @Test
     void testCancelNotification_AlreadySent_ThrowsException() {
         // Arrange
+        // Actually save a SENT notification into the database
         Notification sentNotification = new Notification();
-        sentNotification.setId(1L);
+        sentNotification.setRecipient("test@example.com");
+        sentNotification.setChannel(NotificationChannel.SMS);
+        sentNotification.setMessage("Testing");
         sentNotification.setStatus(NotificationStatus.SENT); // Already sent!
-
-        when(notificationRepository.findById(1L)).thenReturn(Optional.of(sentNotification));
+        sentNotification.setAttempts(1);
+        sentNotification.setMaxAttempts(3);
+        sentNotification.setPriority(NotificationPriority.NORMAL);
+        
+        sentNotification = notificationRepository.save(sentNotification);
+        
+        final Long savedId = sentNotification.getId();
 
         // Act & Assert
+        // Trying to cancel a SENT notification should fail
         assertThrows(IllegalNotificationStateException.class, () -> {
-            notificationService.cancelNotification(1L);
+            notificationService.cancelNotification(savedId);
         });
         
-        // Verify that the delete method was NEVER called because it threw an error first
-        verify(notificationRepository, never()).delete(any(Notification.class));
+        // Verify that it wasn't deleted from the database
+        assertTrue(notificationRepository.existsById(savedId));
     }
 }
