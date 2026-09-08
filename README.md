@@ -43,3 +43,11 @@ Open your browser and go to http://localhost:8080/swagger-ui.html. You'll see a 
 
 ### 2. The Postman way
 I've included a file called NotificationQueueService.postman_collection.json in the root folder. Just import it into Postman and all the requests are ready to go with example data.
+
+## How to connect this to your main app
+
+Since this is a standalone backend service, connecting it to your main application (like a React website, a mobile app, or even another Java backend) is extremely simple. 
+
+You don't need to install any special libraries. Your main app just treats this service like a third-party API and sends a standard HTTP POST request to it. 
+
+For example, if a user signs up on your main website, your website just makes an HTTP call to `http://localhost:8080/api/notifications` with the user's email and message. This service will instantly catch that request, put it in the queue, and handle the actual sending in the background while your main website continues running smoothly!
